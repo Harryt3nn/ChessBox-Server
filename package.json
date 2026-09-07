@@ -1,0 +1,21 @@
+{
+  "name": "chessbox-server",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npx tsx watch --env-file=apps/api/.env apps/api/src/index.ts"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "eslint": "^8.57.1",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "typescript": "^5.9.3"
+  }
+}

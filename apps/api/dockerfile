@@ -1,0 +1,17 @@
+FROM node:20
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/shared/package.json ./packages/shared/
+
+RUN npm ci
+
+COPY apps/api/prisma ./apps/api/prisma
+RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+
+COPY apps/api/src ./apps/api/src
+COPY packages/shared/src ./packages/shared/src
+
+CMD npm run start --workspace apps/api

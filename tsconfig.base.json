@@ -1,0 +1,11 @@
+// tsconfig.base.json
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  }
+}

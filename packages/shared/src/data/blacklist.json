@@ -1,0 +1,34 @@
+{
+  "system": [
+    "admin",
+    "moderator",
+    "mod",
+    "owner",
+    "help",
+    "support",
+    "system",
+    "bot",
+    "official",
+    "staff",
+    "developer",
+    "server"
+  ],
+  "app": [
+    "chessbox",
+    "chessboxadmin",
+    "officialsupport",
+    "systembot"
+  ],
+  "chess": [
+    "magnus",
+    "carlsen",
+    "hikaru",
+    "nakamura",
+    "firouzja",
+    "nepo",
+    "fischer",
+    "kasparov",
+    "tal",
+    "anand"
+  ]
+}
