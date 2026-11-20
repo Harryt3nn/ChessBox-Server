@@ -6,8 +6,9 @@ services:
       POSTGRES_USER: chessbox
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: chessbox
-    ports:
-      - "5432:5432"
+    # not published: only the api container (on the compose network) needs the database.
+    # to reach it from the Pi itself for maintenance, use:
+    #   ports: ["127.0.0.1:5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -19,7 +20,10 @@ services:
     ports:
       - "3001:3001"
     environment:
+      NODE_ENV: production
       DATABASE_URL: postgresql://chessbox:${POSTGRES_PASSWORD}@postgres:5432/chessbox
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,null}
     depends_on:
       - postgres
 

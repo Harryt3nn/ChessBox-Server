@@ -3,6 +3,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "moduleResolution": "bundler",
+    "target": "es2022",
     "outDir": "dist",
     "rootDir": "src",
     "types": ["node"]

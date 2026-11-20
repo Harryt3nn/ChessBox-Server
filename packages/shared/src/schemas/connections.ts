@@ -3,10 +3,14 @@
 
 import { z } from 'zod';
 
+// Lichess and Chess.com usernames only use letters, numbers, _ and -
+// enforcing that here also stops anything else being smuggled into the upstream API URL
 export const connectPlatformUsernameSchema = z
   .string()
+  .trim()
   .min(1, 'Username is required')
-  .max(50, 'Username must be at most 50 characters');
+  .max(50, 'Username must be at most 50 characters')
+  .regex(/^[A-Za-z0-9_-]+$/, 'Username can only contain letters, numbers, _ and -');
 
 export const connectLichessInputSchema = z.object({
   username: connectPlatformUsernameSchema,

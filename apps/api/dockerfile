@@ -8,10 +8,17 @@ COPY packages/shared/package.json ./packages/shared/
 RUN npm ci
 
 COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma.config.ts ./apps/api/
 RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
 
 
 COPY apps/api/src ./apps/api/src
 COPY packages/shared/src ./packages/shared/src
 
-CMD npm run start --workspace apps/api
+ENV NODE_ENV=production
+
+# don't run the API as root inside the container
+USER node
+
+# apply any pending database migrations, then start the API
+CMD cd apps/api && npx prisma migrate deploy && cd /app && npm run start --workspace apps/api
