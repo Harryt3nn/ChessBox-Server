@@ -4,7 +4,8 @@ import { TRPCError } from '@trpc/server';
 import jwt from 'jsonwebtoken';
 import { loginInputSchema, registerInputSchema } from '@chessbox/shared';
 import { hashPassword, verifyPassword } from '../auth/password';
-import { router, publicProcedure, protectedProcedure } from '../trpc';
+import { router, publicProcedure, protectedProcedure, enforceLimit } from '../trpc';
+import { limits, loginKey } from '../security/rateLimit';
 
 function signToken(userId: string) {
   return jwt.sign({ sub: userId }, process.env.JWT_SECRET!, { expiresIn: '3d' });
@@ -18,6 +19,7 @@ const DUMMY_HASH =
 
 export const authRouter = router({
   register: publicProcedure.input(registerInputSchema).mutation(async ({ input, ctx }) => {
+      enforceLimit(limits.register, ctx.ip);
       const existing = await ctx.prisma.user.findFirst({
         where: { OR: [{ email: input.email }, { username: input.username }] },
       });
@@ -42,6 +44,8 @@ export const authRouter = router({
     }),
 
   login: publicProcedure.input(loginInputSchema).mutation(async ({ input, ctx }) => {
+    const limitKey = loginKey(ctx.ip, input.username);
+    enforceLimit(limits.login, limitKey);
     let user;
     try{
        user = await ctx.prisma.user.findUnique(
@@ -58,6 +62,7 @@ export const authRouter = router({
       if (!user || !valid) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid credentials' });
       }
+      limits.login.reset(limitKey);
 
       return {
         token: signToken(user.id),

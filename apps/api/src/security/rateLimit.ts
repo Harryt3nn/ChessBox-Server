@@ -52,4 +52,12 @@ export const limits = {
 
   // proxies to Lichess / Chess.com -- keep well under their API limits
   connectByUser: new RateLimiter(10, 15 * MINUTE),
+
+  // D26 (TUNE): password tries per IP + username, cleared on success so typos never lock you out
+  login: new RateLimiter(10, 15 * MINUTE),
+  register: new RateLimiter(5, 60 * MINUTE), // per IP
 };
+
+// per IP + username, so guessing one account from one machine is stopped without
+// letting anyone lock the owner out everywhere; usernames are compared case-insensitively here
+export const loginKey = (ip: string, username: string) => `${ip}|${username.toLowerCase()}`;

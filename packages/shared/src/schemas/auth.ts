@@ -64,3 +64,22 @@ export const registerOutputSchema = z.object({
   token: z.string(),
 });
 export type RegisterOutput = z.infer<typeof registerOutputSchema>;
+
+// the current password is only checked against the stored hash, so it isn't held to today's
+// password rules (an old password may predate them); the length cap still stops huge inputs
+const currentPasswordSchema = z
+  .string()
+  .min(1, 'Enter your current password')
+  .max(64, 'Password must be at most 64 characters');
+
+export const changePasswordInputSchema = z.object({
+  currentPassword: currentPasswordSchema,
+  newPassword: passwordSchema,
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordInputSchema>;
+
+export const changeUsernameInputSchema = z.object({
+  password: currentPasswordSchema,
+  newUsername: usernameSchema,
+});
+export type ChangeUsernameInput = z.infer<typeof changeUsernameInputSchema>;
