@@ -1,7 +1,7 @@
 /*apps/api/src/routers/user.ts*/
 
 import { TRPCError } from '@trpc/server';
-import { changePasswordInputSchema, changeUsernameInputSchema } from '@chessbox/shared';
+import { changePasswordInputSchema, changePasswordOutputSchema, changeUsernameInputSchema } from '@chessbox/shared';
 import { Prisma } from '../generated/prisma/client';
 import { hashPassword, verifyPassword } from '../auth/password';
 import { signToken } from '../auth/token';
@@ -33,7 +33,7 @@ export const userRouter = router({
   ),
 
   // D43: bumping tokenVersion signs out every other device; this one gets a fresh token to keep
-  changePassword: protectedProcedure.input(changePasswordInputSchema).mutation(async ({ input, ctx }) => {
+  changePassword: protectedProcedure.input(changePasswordInputSchema).output(changePasswordOutputSchema).mutation(async ({ input, ctx }) => {
     await confirmPassword(ctx, input.currentPassword);
     const user = await ctx.prisma.user.update({
       where: { id: ctx.userId },
