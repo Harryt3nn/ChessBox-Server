@@ -1,15 +1,11 @@
 /*apps/api/src/routers/auth.ts*/
 
 import { TRPCError } from '@trpc/server';
-import jwt from 'jsonwebtoken';
 import { loginInputSchema, registerInputSchema } from '@chessbox/shared';
 import { hashPassword, verifyPassword } from '../auth/password';
+import { signToken } from '../auth/token';
 import { router, publicProcedure, protectedProcedure, enforceLimit } from '../trpc';
 import { limits, loginKey } from '../security/rateLimit';
-
-function signToken(userId: string) {
-  return jwt.sign({ sub: userId }, process.env.JWT_SECRET!, { expiresIn: '3d' });
-}
 
 // Constant-format hash used to verify against when no user is found, so
 // login takes the same ~300ms whether or not the username exists. Any
@@ -38,7 +34,7 @@ export const authRouter = router({
       });
 
       return {
-        token: signToken(user.id),
+        token: signToken(user.id, user.tokenVersion),
         user: { id: user.id, username: user.username, email: user.email },
       };
     }),
@@ -65,7 +61,7 @@ export const authRouter = router({
       limits.login.reset(limitKey);
 
       return {
-        token: signToken(user.id),
+        token: signToken(user.id, user.tokenVersion),
         user: { id: user.id, username: user.username },
       };
     }),

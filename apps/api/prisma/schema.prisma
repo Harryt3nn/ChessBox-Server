@@ -19,4 +19,5 @@ model User {
   createdAt    DateTime @default(now())
   lichessName String?
   chesscomName String?
+  tokenVersion Int      @default(0)
 }

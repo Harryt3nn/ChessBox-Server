@@ -77,7 +77,8 @@ export const UserScalarFieldEnum = {
   passwordHash: 'passwordHash',
   createdAt: 'createdAt',
   lichessName: 'lichessName',
-  chesscomName: 'chesscomName'
+  chesscomName: 'chesscomName',
+  tokenVersion: 'tokenVersion'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]

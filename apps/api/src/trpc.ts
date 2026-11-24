@@ -4,9 +4,9 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
 import { ZodError } from 'zod';
 import { PrismaClient } from './generated/prisma/client';
-import jwt from 'jsonwebtoken';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { env } from './env';
+import { userIdFromHeader } from './auth/token';
 import type { RateLimiter } from './security/rateLimit';
 
 const adapter = new PrismaPg({ connectionString: env.databaseUrl });
@@ -14,20 +14,8 @@ const prisma = new PrismaClient({ adapter });
 
 export type Context = Awaited<ReturnType<typeof createContext>>;
 
-export function createContext({ req }: CreateFastifyContextOptions) {
-  const authHeader = req.headers.authorization;
-  let userId: string | null = null;
-
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
-    try {
-      const payload = jwt.verify(token, env.jwtSecret) as { sub: string };
-      userId = payload.sub;
-    } catch {
-      // invalid/expired token -- leave userId null
-    }
-  }
-
+export async function createContext({ req }: CreateFastifyContextOptions) {
+  const userId = await userIdFromHeader(prisma, req.headers.authorization);
   return { prisma, userId, ip: req.ip };
 }
 

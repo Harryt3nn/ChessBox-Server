@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server';
 import { changePasswordInputSchema, changeUsernameInputSchema } from '@chessbox/shared';
 import { Prisma } from '../generated/prisma/client';
 import { hashPassword, verifyPassword } from '../auth/password';
+import { signToken } from '../auth/token';
 import { router, protectedProcedure, enforceLimit, type Context } from '../trpc';
 import { limits, loginKey } from '../security/rateLimit';
 
@@ -31,14 +32,15 @@ export const userRouter = router({
     }),
   ),
 
-  // D27: other devices stay signed in until their token expires (revisit before leaving Tailscale)
+  // D43: bumping tokenVersion signs out every other device; this one gets a fresh token to keep
   changePassword: protectedProcedure.input(changePasswordInputSchema).mutation(async ({ input, ctx }) => {
     await confirmPassword(ctx, input.currentPassword);
-    await ctx.prisma.user.update({
+    const user = await ctx.prisma.user.update({
       where: { id: ctx.userId },
-      data: { passwordHash: await hashPassword(input.newPassword) },
+      data: { passwordHash: await hashPassword(input.newPassword), tokenVersion: { increment: 1 } },
+      select: { tokenVersion: true },
     });
-    return { ok: true as const };
+    return { ok: true as const, token: signToken(ctx.userId, user.tokenVersion) };
   }),
 
   // the token holds the user id, not the name, so it stays valid after a rename

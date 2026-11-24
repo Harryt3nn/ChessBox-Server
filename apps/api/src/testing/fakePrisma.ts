@@ -13,6 +13,7 @@ interface UserRow {
   createdAt: Date;
   lichessName: string | null;
   chesscomName: string | null;
+  tokenVersion: number;
 }
 
 type Where = Partial<Pick<UserRow, 'id' | 'username' | 'email'>>;
@@ -34,6 +35,7 @@ export function fakePrisma(seed: Partial<UserRow>[] = []) {
     createdAt: new Date(0),
     lichessName: null,
     chesscomName: null,
+    tokenVersion: 0,
     ...r,
   }));
 
@@ -47,18 +49,20 @@ export function fakePrisma(seed: Partial<UserRow>[] = []) {
       return row ? pick(row, select) : null;
     },
     findFirst: async ({ where }: { where: { OR: Where[] } }) => rows.find(r => where.OR.some(w => matches(r, w))) ?? null,
-    create: async ({ data }: { data: Omit<UserRow, 'id' | 'createdAt' | 'lichessName' | 'chesscomName'> }) => {
+    create: async ({ data }: { data: Pick<UserRow, 'username' | 'email' | 'passwordHash'> }) => {
       if (uniqueClash(data)) throw p2002();
-      const row = { id: `user-${rows.length}`, createdAt: new Date(), lichessName: null, chesscomName: null, ...data };
+      const row = { id: `user-${rows.length}`, createdAt: new Date(), lichessName: null, chesscomName: null, tokenVersion: 0, ...data };
       rows.push(row);
       return row;
     },
-    update: async ({ where, data }: { where: Where; data: Partial<UserRow> }) => {
+    update: async ({ where, data, select }: { where: Where; data: Partial<Omit<UserRow, 'tokenVersion'>> & { tokenVersion?: { increment: number } }; select?: Record<string, boolean> }) => {
       const row = rows.find(r => matches(r, where));
       if (!row) throw new Error('Record to update not found');
-      if (uniqueClash(data, row)) throw p2002();
-      Object.assign(row, data);
-      return row;
+      const { tokenVersion, ...fields } = data;
+      if (uniqueClash(fields, row)) throw p2002();
+      Object.assign(row, fields);
+      if (tokenVersion) row.tokenVersion += tokenVersion.increment;
+      return pick(row, select);
     },
   };
 

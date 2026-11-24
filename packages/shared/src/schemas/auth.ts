@@ -78,6 +78,13 @@ export const changePasswordInputSchema = z.object({
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordInputSchema>;
 
+// D43: the password change revokes every token, so the caller must swap in this one
+export const changePasswordOutputSchema = z.object({
+  ok: z.literal(true),
+  token: z.string(),
+});
+export type ChangePasswordOutput = z.infer<typeof changePasswordOutputSchema>;
+
 export const changeUsernameInputSchema = z.object({
   password: currentPasswordSchema,
   newUsername: usernameSchema,
