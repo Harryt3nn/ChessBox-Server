@@ -1,6 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import jwt from 'jsonwebtoken';
 import { appRouter } from './appRouter';
 import { hashPassword, verifyPassword } from '../auth/password';
+import { userIdFromHeader } from '../auth/token';
+import { env } from '../env';
 import { fakePrisma } from '../testing/fakePrisma';
 
 // T19 / D26-D28: login + register rate limits, change password, change username.
@@ -70,7 +73,8 @@ describe('register rate limit (D26)', () => {
 describe('user.changePassword (D28)', () => {
   it('stores a new hash when the current password is right', async () => {
     const { db, asHarry } = setup();
-    await expect(asHarry.user.changePassword({ currentPassword: 'correct-horse', newPassword: 'battery-staple' })).resolves.toEqual({ ok: true });
+    await expect(asHarry.user.changePassword({ currentPassword: 'correct-horse', newPassword: 'battery-staple' }))
+      .resolves.toEqual({ ok: true, token: expect.any(String) });
     const stored = db.rows.find(r => r.id === 'harry')!.passwordHash;
     expect(await verifyPassword('battery-staple', stored)).toBe(true);
     expect(await verifyPassword('correct-horse', stored)).toBe(false);
@@ -141,6 +145,65 @@ describe('user.changeUsername (D28)', () => {
     const { asHarry } = setup();
     await expect(asHarry.user.changeUsername({ password: 'correct-horse', newUsername: 'no spaces!' }))
       .rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+});
+
+describe('token version (D43)', () => {
+  const bearer = (token: string) => `Bearer ${token}`;
+  const loginToken = async (caller: ReturnType<typeof setup>['asGuest']) =>
+    (await caller.auth.login({ username: 'harry', password: 'correct-horse' })).token;
+  const changePassword = (caller: ReturnType<typeof setup>['asHarry']) =>
+    caller.user.changePassword({ currentPassword: 'correct-horse', newPassword: 'battery-staple' });
+
+  it('accepts a login token', async () => {
+    const { db, asGuest } = setup();
+    expect(await userIdFromHeader(db.prisma, bearer(await loginToken(asGuest)))).toBe('harry');
+  });
+
+  it('a password change rejects older tokens and the fresh one works', async () => {
+    const { db, asGuest, asHarry } = setup();
+    const before = await loginToken(asGuest);
+    const { token } = await changePassword(asHarry);
+    expect(await userIdFromHeader(db.prisma, bearer(before))).toBeNull();
+    expect(await userIdFromHeader(db.prisma, bearer(token))).toBe('harry');
+  });
+
+  it('a second change rejects the token the first one handed out', async () => {
+    const { db, asHarry } = setup();
+    const { token: first } = await changePassword(asHarry);
+    await asHarry.user.changePassword({ currentPassword: 'battery-staple', newPassword: 'correct-horse' });
+    expect(await userIdFromHeader(db.prisma, bearer(first))).toBeNull();
+  });
+
+  it('a token from before the deploy (no ver) counts as version 0', async () => {
+    const { db, asHarry } = setup();
+    const preDeploy = jwt.sign({ sub: 'harry' }, env.jwtSecret, { expiresIn: '3d' });
+    expect(await userIdFromHeader(db.prisma, bearer(preDeploy))).toBe('harry');
+    await changePassword(asHarry);
+    expect(await userIdFromHeader(db.prisma, bearer(preDeploy))).toBeNull();
+  });
+
+  it('a username change keeps every token valid', async () => {
+    const { db, asGuest, asHarry } = setup();
+    const before = await loginToken(asGuest);
+    await asHarry.user.changeUsername({ password: 'correct-horse', newUsername: 'harry_t' });
+    expect(db.rows.find(r => r.id === 'harry')!.tokenVersion).toBe(0);
+    expect(await userIdFromHeader(db.prisma, bearer(before))).toBe('harry');
+  });
+
+  it('rejects a missing header, a non-Bearer header, a bad signature and an expired token', async () => {
+    const { db } = setup();
+    const expired = jwt.sign({ sub: 'harry', ver: 0, exp: Math.floor(Date.now() / 1000) - 60 }, env.jwtSecret);
+    const forged = jwt.sign({ sub: 'harry', ver: 0 }, 'not-the-secret');
+    for (const header of [undefined, 'Basic abc', bearer('not.a.jwt'), bearer(forged), bearer(expired)]) {
+      expect(await userIdFromHeader(db.prisma, header)).toBeNull();
+    }
+  });
+
+  it("lets a deleted account's id through, so procedures answer NOT_FOUND (D13)", async () => {
+    const { db } = setup();
+    const ghost = jwt.sign({ sub: 'deleted', ver: 0 }, env.jwtSecret);
+    expect(await userIdFromHeader(db.prisma, bearer(ghost))).toBe('deleted');
   });
 });
 
