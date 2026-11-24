@@ -4,10 +4,13 @@ import jwt from 'jsonwebtoken';
 import { env } from '../env';
 import type { PrismaClient } from '../generated/prisma/client';
 
+// pinned on both sides: verify would otherwise accept any HMAC variant the header names (T38)
+const ALGORITHM = 'HS256';
+
 // D43: a token carries the user's tokenVersion as `ver`; bumping the version (password change)
 // makes every older token fail the check below
 export function signToken(userId: string, tokenVersion: number) {
-  return jwt.sign({ sub: userId, ver: tokenVersion }, env.jwtSecret, { expiresIn: '3d' });
+  return jwt.sign({ sub: userId, ver: tokenVersion }, env.jwtSecret, { algorithm: ALGORITHM, expiresIn: '3d' });
 }
 
 /** the user id a bearer header proves, or null if it's missing, invalid, expired or revoked */
@@ -16,7 +19,7 @@ export async function userIdFromHeader(prisma: Pick<PrismaClient, 'user'>, authH
 
   let payload: { sub: string; ver?: number };
   try {
-    payload = jwt.verify(authHeader.slice(7), env.jwtSecret) as typeof payload;
+    payload = jwt.verify(authHeader.slice(7), env.jwtSecret, { algorithms: [ALGORITHM] }) as typeof payload;
   } catch {
     return null;
   }
