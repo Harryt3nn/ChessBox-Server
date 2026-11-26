@@ -19,6 +19,19 @@ describe('tRPC batches', () => {
     expect(res.json().map((r: { error: { data: { code: string } } }) => r.error.data.code)).toEqual(Array(4).fill('UNAUTHORIZED'));
   });
 
+  // the tRPC version of GraphQL aliases: many password guesses in one HTTP request
+  it('counts every login in a batch against the login limit', async () => {
+    const guesses = JSON.stringify(Object.fromEntries(Array.from({ length: 10 }, (_, i) => [i, { username: 'harry', password: `wrong-guess-${i}` }])));
+    const json = { 'content-type': 'application/json' };
+    const batch = await app.inject({ method: 'POST', url: batchPath('auth.login', 10), payload: guesses, headers: json, remoteAddress: '10.20.0.5' });
+    // the test database points at nothing, so a guess that got past the limiter ends in a database error
+    expect(batch.json().map((r: { error: { data: { code: string } } }) => r.error.data.code)).toEqual(Array(10).fill('INTERNAL_SERVER_ERROR'));
+
+    const res = await app.inject({ method: 'POST', url: '/trpc/auth.login', payload: JSON.stringify({ username: 'harry', password: 'wrong-guess-10' }), headers: json, remoteAddress: '10.20.0.5' });
+    expect(res.statusCode).toBe(429);
+    expect(res.json().error.data.code).toBe('TOO_MANY_REQUESTS');
+  });
+
   it('refuses a batch of more than 10 calls', async () => {
     const res = await app.inject({ method: 'GET', url: batchPath('user.me', 11), remoteAddress: '10.20.0.2' });
     expect(res.statusCode).toBe(400);
