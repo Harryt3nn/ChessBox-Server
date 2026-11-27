@@ -64,7 +64,7 @@ All procedures are under `/trpc`. Inputs are validated with the zod schemas in `
 |---|---|---|
 | `auth.register` | public | Create account, return a session token |
 | `auth.login` | public | Sign in with `username` and `password` |
-| `auth.me` | signed in | Current user — never includes the password hash |
+| `auth.me` | signed in | Current user - never includes the password hash |
 | `connections.connectLichess` | signed in | Check the Lichess account exists, then save it |
 | `connections.connectChesscom` | signed in | Check the Chess.com account exists, then save it |
 | `user.me` | signed in | Same safe fields as `auth.me` |
