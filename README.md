@@ -86,4 +86,4 @@ All procedures are under `/trpc`. Inputs are validated with the zod schemas in `
 - **Errors:** in production, internal errors return a generic message and no stack trace; validation errors return the first readable message.
 - **Requests:** 64 KB body limit, CORS allow-list, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`.
 - **Upstream calls:** chess usernames limited to `[A-Za-z0-9_-]`, URL-encoded, 8 s timeout.
-- **Network:** reachable only over Tailscale. Traffic is HTTP inside the encrypted tunnel — add HTTPS before exposing the API any other way.
+- **Network:** reachable only over Tailscale. Traffic is HTTP inside the encrypted tunnel - add HTTPS before exposing the API any other way.
